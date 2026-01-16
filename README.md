@@ -8,7 +8,8 @@ An end-to-end streaming data pipeline that simulates, processes, and visualizes 
 * **Storage:** InfluxDB (Time-Series Database)
 * **Visualization:** Grafana (Real-time ICU Dashboard)
 * **Infrastructure:** Docker & Docker Compose
-
+![Dashboard Preview](dashboard-images/Kakfa-UI.png)
+![Dashboard Preview](dashboard-images/minIO_UI.png)    
 ## 🛠️ Setup & Run
 1.  **Clone the repo:**
     ```bash
@@ -29,3 +30,4 @@ An end-to-end streaming data pipeline that simulates, processes, and visualizes 
 
 ##  Dashboard
 Access Grafana at `http://localhost:3000` (Default login: admin/password123).
+![Dashboard Preview](dashboard-images/grafana-dashboard.png)
