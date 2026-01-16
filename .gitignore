@@ -1,0 +1,18 @@
+# --- System & Python ---
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# --- Infrastructure Data (CRITICAL: Do not upload these) ---
+# Your warnings showed these are in the "data" folder
+data/
+kafka_data/
+zookeeper_data/
+influx_data/
+checkpoint/
+
+# --- Optional: Ignore the dataset if it's huge ---
+# (The patient CSVs)
+synthea_data/

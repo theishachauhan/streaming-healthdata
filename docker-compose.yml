@@ -1,0 +1,114 @@
+#version: '3.8'
+
+services:
+  minio:
+    image: minio/minio:latest
+    container_name: healthcare-minio
+    ports:
+      - "9000:9000" # API Port
+      - "9001:9001" # Console Port
+    environment:
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+
+  # Helper to create buckets automatically
+  minio-init:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c " sleep 5; /usr/bin/mc config host add myminio http://minio:9000 admin password123; /usr/bin/mc mb --ignore-existing myminio/raw-data; /usr/bin/mc mb --ignore-existing myminio/processed-data; /usr/bin/mc mb --ignore-existing myminio/ml-models; exit 0; "
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: healthcare-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+    mem_limit: 512m
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: healthcare-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      #  LISTENERS (bind ports)
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
+
+      # ADVERTISED (how clients connect)
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xmx512m -Xms512m"
+    volumes:
+      - ./data/kafka:/var/lib/kafka/data
+    mem_limit: 1024m
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: healthcare-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    mem_limit: 512m
+
+  # ----------------------------
+  #     PROCESSING LAYER (Spark)
+  # ----------------------------
+  spark:
+    build: ./spark-build
+    container_name: healthcare-spark
+    environment:
+      - SPARK_MODE=master
+    ports:
+      - "8081:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark/apps:/app
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+
+  # ----------------------------
+  #   VISUALIZATION LAYER
+  # ----------------------------
+  influxdb:
+    image: influxdb:2.7
+    container_name: healthcare-influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password123
+      - DOCKER_INFLUXDB_INIT_ORG=streamhealth
+      - DOCKER_INFLUXDB_INIT_BUCKET=vitals
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=my-super-secret-auth-token
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: healthcare-grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - influxdb
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=password123
