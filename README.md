@@ -9,9 +9,9 @@ An end-to-end streaming data pipeline that simulates, processes, and visualizes 
 * **Visualization:** Grafana (Real-time ICU Dashboard)
 * **Infrastructure:** Docker & Docker Compose
 
-![Dashboard Preview](dashboard-images\Kakfa-UI.png)
+![Dashboard Preview](dashboard-images/Kafka-UI.png)
 
-![Dashboard Preview](dashboard-images\minIO-UI.png)
+![Dashboard Preview](dashboard-images/minIO-UI.png)
 ## 🛠️ Setup & Run
 1.  **Clone the repo:**
     ```bash
